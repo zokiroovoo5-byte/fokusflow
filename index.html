@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FokusFlow — Pomodoro va Vaqt Boshqaruvi</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen transition-colors duration-500 flex flex-col justify-between selection:bg-rose-500 selection:text-white">
+
+    <!-- Top Navigation Bar -->
+    <header class="w-full border-b border-slate-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md sticky top-0 z-30 transition-colors duration-300">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+            <!-- Brand Logo -->
+            <div class="flex items-center gap-2.5">
+                <div id="brand-icon" class="w-9 h-9 rounded-xl bg-rose-500 text-white flex items-center justify-center shadow-md shadow-rose-500/20 transition-colors duration-500">
+                    <i class="fa-solid fa-stopwatch text-lg"></i>
+                </div>
+                <div>
+                    <span class="font-bold text-lg tracking-tight block leading-none">FokusFlow</span>
+                    <span class="text-[11px] font-medium text-slate-500 dark:text-slate-400">Pomodoro taymer</span>
+                </div>
+            </div>
+
+            <!-- Action Controls -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <!-- Sound Toggle Button -->
+                <button id="sound-toggle-btn" onclick="toggleSound()" title="Ovozni yoqish/o'chirish" class="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-all active:scale-95">
+                    <i id="sound-icon" class="fa-solid fa-volume-high text-sm w-4 h-4 flex items-center justify-center"></i>
+                </button>
+
+                <!-- Theme Toggle Button -->
+                <button id="theme-toggle-btn" onclick="toggleTheme()" title="Tungi / Kunduzgi rejim" class="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-all active:scale-95">
+                    <i id="theme-icon" class="fa-solid fa-moon text-sm w-4 h-4 flex items-center justify-center"></i>
+                </button>
+
+                <!-- Settings Button -->
+                <button onclick="openSettingsModal()" class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium text-sm transition-all active:scale-95">
+                    <i class="fa-solid fa-sliders"></i>
+                    <span class="hidden sm:inline">Sozlamalar</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Application Content -->
+    <main class="flex-grow max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-10">
+        <!-- Toast Notification Container (Replaces alert) -->
+        <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            <!-- Left Column: Timer & Statistics (7 cols on lg) -->
+            <div class="lg:col-span-7 flex flex-col gap-6">
+                
+                <!-- Timer Card -->
+                <section id="timer-card" class="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-200/80 dark:border-slate-800 transition-all duration-500">
+                    
+                    <!-- Mode Selector Tabs -->
+                    <div class="grid grid-cols-3 gap-1.5 p-1.5 bg-slate-100 dark:bg-slate-800/90 rounded-2xl mb-8">
+                        <button id="tab-focus" onclick="switchMode('focus')" class="mode-tab py-2.5 px-2 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 bg-rose-500 text-white shadow-sm">
+                            Fokus
+                        </button>
+                        <button id="tab-shortBreak" onclick="switchMode('shortBreak')" class="mode-tab py-2.5 px-2 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all duration-300">
+                            Qisqa tanaffus
+                        </button>
+                        <button id="tab-longBreak" onclick="switchMode('longBreak')" class="mode-tab py-2.5 px-2 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all duration-300">
+                            Uzoq tanaffus
+                        </button>
+                    </div>
+
+                    <!-- Active Task Banner -->
+                    <div class="text-center mb-6">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 block mb-1">Joriy vazifa</span>
+                        <p id="active-task-display" class="text-sm sm:text-base font-medium text-slate-700 dark:text-slate-200 truncate max-w-md mx-auto px-4 py-1.5 rounded-full bg-slate-100/80 dark:bg-slate-800/60 inline-block">
+                            Vazifa tanlanmagan — erkin fokus
+                        </p>
+                    </div>
+
+                    <!-- Circular SVG Progress Timer -->
+                    <div class="relative w-64 h-64 sm:w-72 sm:h-72 mx-auto my-4 flex items-center justify-center">
+                        <svg class="w-full h-full -rotate-90 transform" viewBox="0 0 260 260">
+                            <!-- Background Ring -->
+                            <circle cx="130" cy="130" r="116" stroke="currentColor" stroke-width="10" fill="transparent" class="text-slate-100 dark:text-slate-800 transition-colors duration-300" />
+                            <!-- Animated Progress Ring -->
+                            <circle id="progress-ring" cx="130" cy="130" r="116" stroke="currentColor" stroke-width="10" stroke-linecap="round" fill="transparent"
+                                class="text-rose-500 transition-all duration-500 ease-linear"
+                                stroke-dasharray="728.85"
+                                stroke-dashoffset="0" />
+                        </svg>
+                        
+                        <!-- Digital Time & Cycle Indicator -->
+                        <div class="absolute inset-0 flex flex-col items-center justify-center">
+                            <div id="time-display" class="text-5xl sm:text-6xl font-extrabold tracking-tight tabular-nums text-slate-900 dark:text-white">
+                                25:00
+                            </div>
+                            <div id="status-label" class="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">
+                                Tayyor
+                            </div>
+                            <!-- Cycle Dots -->
+                            <div id="cycle-dots" class="flex items-center gap-1.5 mt-3" title="Uzoq tanaffusgacha bo'lgan sikllar">
+                                <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                                <span class="w-2.5 h-2.5 rounded-full bg-slate-200 dark:bg-slate-700"></span>
+                                <span class="w-2.5 h-2.5 rounded-full bg-slate-200 dark:bg-slate-700"></span>
+                                <span class="w-2.5 h-2.5 rounded-full bg-slate-200 dark:bg-slate-700"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Main Timer Controls -->
+                    <div class="flex items-center justify-center gap-3 sm:gap-4 mt-8">
+                        <!-- Reset Button -->
+                        <button onclick="resetTimer()" title="Qayta o'rnatish" class="p-3.5 sm:p-4 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-all active:scale-95">
+                            <i class="fa-solid fa-rotate-left text-lg w-5 h-5 flex items-center justify-center"></i>
+                        </button>
+
+                        <!-- Start / Pause Primary CTA -->
+                        <button id="start-pause-btn" onclick="toggleTimer()" class="px-8 sm:px-10 py-3.5 sm:py-4 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white font-bold text-base sm:text-lg shadow-lg shadow-rose-500/30 transition-all active:scale-95 flex items-center gap-2.5 min-w-[170px] justify-center">
+                            <i id="play-pause-icon" class="fa-solid fa-play"></i>
+                            <span id="play-pause-text">Boshlash</span>
+                        </button>
+
+                        <!-- Skip Button -->
+                        <button onclick="skipTimer()" title="Keyingi bosqichga o'tish" class="p-3.5 sm:p-4 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-all active:scale-95">
+                            <i class="fa-solid fa-forward-step text-lg w-5 h-5 flex items-center justify-center"></i>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- Daily Productivity Statistics Card -->
+                <section class="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-lg shadow-slate-200/40 dark:shadow-none border border-slate-200/80 dark:border-slate-800">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-base font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-simple text-rose-500" id="stats-icon"></i>
+                            Bugungi natijalar
+                        </h2>
+                        <button onclick="resetDailyStats()" class="text-xs font-medium text-slate-400 hover:text-rose-500 transition-colors">
+                            Tozalash
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-3 sm:gap-4">
+                        <div class="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-3.5 sm:p-4 border border-slate-100 dark:border-slate-800">
+                            <span class="text-xs text-slate-500 dark:text-slate-400 block mb-1">Yakunlangan sessiyalar</span>
+                            <div class="flex items-baseline gap-1">
+                                <span id="stat-sessions" class="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">0</span>
+                                <span class="text-xs text-slate-400">ta</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-3.5 sm:p-4 border border-slate-100 dark:border-slate-800">
+                            <span class="text-xs text-slate-500 dark:text-slate-400 block mb-1">Bugungi fokus vaqti</span>
+                            <div class="flex items-baseline gap-1">
+                                <span id="stat-minutes" class="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">0</span>
+                                <span class="text-xs text-slate-400">daq</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-3.5 sm:p-4 border border-slate-100 dark:border-slate-800">
+                            <span class="text-xs text-slate-500 dark:text-slate-400 block mb-1">Bajarilgan vazifalar</span>
+                            <div class="flex items-baseline gap-1">
+                                <span id="stat-tasks" class="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">0</span>
+                                <span class="text-xs text-slate-400">ta</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Right Column: Task Manager (5 cols on lg) -->
+            <div class="lg:col-span-5">
+                <section class="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-200/80 dark:border-slate-800 flex flex-col h-full">
+                    <div class="flex items-center justify-between mb-5">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                <i class="fa-solid fa-list-check text-rose-500" id="tasks-icon"></i>
+                                Vazifalar ro'yxati
+                            </h2>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Fokus qilish uchun vazifani tanlang</p>
+                        </div>
+                        <span id="task-counter-badge" class="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                            0 / 0
+                        </span>
+                    </div>
+
+                    <!-- Add New Task Form -->
+                    <form id="add-task-form" onsubmit="handleAddTask(event)" class="mb-5">
+                        <div class="flex flex-col gap-2.5 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-700/80 focus-within:border-rose-400 transition-colors">
+                            <input type="text" id="new-task-input" placeholder="Yangi vazifa qo'shish..." required maxlength="80"
+                                class="w-full bg-transparent text-sm font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none">
+                            
+                            <div class="flex items-center justify-between pt-2 border-t border-slate-200/70 dark:border-slate-700/70">
+                                <div class="flex items-center gap-2">
+                                    <label for="new-task-est" class="text-xs font-medium text-slate-500 dark:text-slate-400">Pomodoro soni:</label>
+                                    <div class="flex items-center bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 px-1.5 py-0.5">
+                                        <button type="button" onclick="adjustEstInput(-1)" class="w-6 h-6 text-slate-500 hover:text-slate-800 dark:hover:text-white font-bold">-</button>
+                                        <input type="number" id="new-task-est" value="1" min="1" max="12" readonly
+                                            class="w-7 text-center text-xs font-bold bg-transparent text-slate-800 dark:text-slate-100 focus:outline-none">
+                                        <button type="button" onclick="adjustEstInput(1)" class="w-6 h-6 text-slate-500 hover:text-slate-800 dark:hover:text-white font-bold">+</button>
+                                    </div>
+                                </div>
+
+                                <button type="submit" id="add-task-btn" class="px-4 py-1.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-semibold shadow-sm transition-all active:scale-95 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-plus"></i>
+                                    Qo'shish
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- Task List Container -->
+                    <div id="task-list" class="flex flex-col gap-2.5 max-h-[380px] overflow-y-auto pr-1">
+                        <!-- Tasks will be dynamically rendered here -->
+                    </div>
+
+                    <!-- Clear Completed Tasks Action -->
+                    <div id="task-footer-actions" class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center hidden">
+                        <button onclick="clearCompletedTasks()" class="text-xs font-medium text-slate-500 hover:text-rose-500 transition-colors flex items-center gap-1.5">
+                            <i class="fa-solid fa-trash-can"></i>
+                            Bajarilganlarni o'chirish
+                        </button>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="w-full py-5 text-center text-xs text-slate-400 dark:text-slate-500 border-t border-slate-200/60 dark:border-slate-800/60 mt-8">
+        <p>FokusFlow — Samarali vaqt boshqaruvi va diqqatni jamlash ilovasi</p>
+    </footer>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-200 dark:border-slate-800 transform transition-all">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+                <h3 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <i class="fa-solid fa-gear text-slate-400"></i>
+                    Taymer sozlamalari
+                </h3>
+                <button onclick="closeSettingsModal()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form id="settings-form" onsubmit="saveSettings(event)" class="mt-5 space-y-5">
+                <!-- Time Durations (Minutes) -->
+                <div>
+                    <label class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-3">Vaqt davomiyligi (daqiqa)</label>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div>
+                            <label for="set-focus" class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Fokus</label>
+                            <input type="number" id="set-focus" min="1" max="120" required
+                                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-rose-500">
+                        </div>
+                        <div>
+                            <label for="set-short" class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Qisqa tanaffus</label>
+                            <input type="number" id="set-short" min="1" max="60" required
+                                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500">
+                        </div>
+                        <div>
+                            <label for="set-long" class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Uzoq tanaffus</label>
+                            <input type="number" id="set-long" min="1" max="90" required
+                                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Long Break Interval -->
+                <div class="flex items-center justify-between pt-2">
+                    <div>
+                        <span class="text-sm font-semibold text-slate-800 dark:text-slate-200 block">Uzoq tanaffus oralig'i</span>
+                        <span class="text-xs text-slate-400">Necha fokusdan so'ng uzoq tanaffus berilsin</span>
+                    </div>
+                    <input type="number" id="set-interval" min="2" max="10" required
+                        class="w-16 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-bold text-center text-slate-900 dark:text-white">
+                </div>
+
+                <!-- Auto-start toggles -->
+                <div class="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                    <label class="flex items-center justify-between cursor-pointer">
+                        <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Tanaffuslarni avtomatik boshlash</span>
+                        <input type="checkbox" id="set-auto-breaks" class="w-4 h-4 accent-rose-500 rounded cursor-pointer">
+                    </label>
+
+                    <label class="flex items-center justify-between cursor-pointer">
+                        <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Pomodorolarni avtomatik boshlash</span>
+                        <input type="checkbox" id="set-auto-pomodoros" class="w-4 h-4 accent-rose-500 rounded cursor-pointer">
+                    </label>
+                </div>
+
+                <!-- Modal Buttons -->
+                <div class="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100 dark:border-slate-800">
+                    <button type="button" onclick="closeSettingsModal()" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-semibold transition-colors">
+                        Bekor qilish
+                    </button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-sm font-semibold shadow-md shadow-rose-500/20 transition-all active:scale-95">
+                        Saqlash
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Application Logic -->
+    <script>
+        // ==========================================
+        // 1. STATE & DEFAULT CONFIGURATION
+        // ==========================================
+        const DEFAULT_SETTINGS = {
+            focus: 25,
+            shortBreak: 5,
+            longBreak: 15,
+            longBreakInterval: 4,
+            autoStartBreaks: false,
+            autoStartPomodoros: false,
+            soundEnabled: true,
+            darkMode: false
+        };
+
+        let settings = { ...DEFAULT_SETTINGS };
+        let currentMode = 'focus'; // 'focus' | 'shortBreak' | 'longBreak'
+        let timeLeft = settings.focus * 60;
+        let totalTime = settings.focus * 60;
+        let isRunning = false;
+        let timerInterval = null;
+        let completedFocusCycles = 0;
+
+        let tasks = [];
+        let activeTaskId = null;
+
+        let stats = {
+            date: new Date().toDateString(),
+            sessions: 0,
+            minutes: 0,
+            completedTasks: 0
+        };
+
+        // SVG Circle Circumference: 2 * PI * 116
+        const CIRCLE_CIRCUMFERENCE = 2 * Math.PI * 116;
+
+        // Theme color palettes for each mode
+        const MODE_THEMES = {
+            focus: {
+                bg: 'bg-rose-500',
+                hover: 'hover:bg-rose-600',
+                text: 'text-rose-500',
+                shadow: 'shadow-rose-500/30',
+                badgeShadow: 'shadow-rose-500/20',
+                label: 'Fokus vaqti'
+            },
+            shortBreak: {
+                bg: 'bg-teal-500',
+                hover: 'hover:bg-teal-600',
+                text: 'text-teal-500',
+                shadow: 'shadow-teal-500/30',
+                badgeShadow: 'shadow-teal-500/20',
+                label: 'Qisqa tanaffus'
+            },
+            longBreak: {
+                bg: 'bg-indigo-500',
+                hover: 'hover:bg-indigo-600',
+                text: 'text-indigo-500',
+                shadow: 'shadow-indigo-500/30',
+                badgeShadow: 'shadow-indigo-500/20',
+                label: 'Uzoq tanaffus'
+            }
+        };
+
+        // ==========================================
+        // 2. INITIALIZATION & STORAGE
+        // ==========================================
+        window.addEventListener('DOMContentLoaded', () => {
+            loadFromLocalStorage();
+            applyThemePreference();
+            updateSoundIcon();
+            switchMode('focus', false);
+            renderTasks();
+            updateStatsUI();
+            renderCycleDots();
+        });
+
+        function loadFromLocalStorage() {
+            try {
+                const savedSettings = localStorage.getItem('fokusflow_settings');
+                if (savedSettings) {
+                    settings = { ...DEFAULT_SETTINGS, ...JSON.parse(savedSettings) };
+                }
+
+                const savedTasks = localStorage.getItem('fokusflow_tasks');
+                if (savedTasks) {
+                    tasks = JSON.parse(savedTasks);
+                }
+
+                const savedActiveTask = localStorage.getItem('fokusflow_active_task');
+                if (savedActiveTask) {
+                    activeTaskId = savedActiveTask;
+                }
+
+                const savedStats = localStorage.getItem('fokusflow_stats');
+                if (savedStats) {
+                    const parsedStats = JSON.parse(savedStats);
+                    // Reset stats if it's a new day
+                    if (parsedStats.date === new Date().toDateString()) {
+                        stats = parsedStats;
+                    } else {
+                        saveStats();
+                    }
+                }
+            } catch (e) {
+                console.error("Ma'lumotlarni yuklashda xatolik:", e);
+            }
+        }
+
+        function saveSettingsToStorage() {
+            localStorage.setItem('fokusflow_settings', JSON.stringify(settings));
+        }
+
+        function saveTasks() {
+            localStorage.setItem('fokusflow_tasks', JSON.stringify(tasks));
+            localStorage.setItem('fokusflow_active_task', activeTaskId || '');
+        }
+
+        function saveStats() {
+            stats.date = new Date().toDateString();
+            localStorage.setItem('fokusflow_stats', JSON.stringify(stats));
+        }
+
+        // ==========================================
+        // 3. WEB AUDIO API SYNTHESIZER (NO EXTERNAL MP3)
+        // ==========================================
+        function playNotificationSound(type = 'complete') {
+            if (!settings.soundEnabled) return;
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                const ctx = new AudioCtx();
+                const now = ctx.currentTime;
+
+                if (type === 'click') {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(600, now);
+                    gain.gain.setValueAtTime(0.08, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.06);
+                    return;
+                }
+
+                // Pleasant harmonic chime chord (C5 - E5 - G5 - B5)
+                const notes = [523.25, 659.25, 783.99, 987.77];
+                notes.forEach((freq, idx) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.14);
+
+                    gain.gain.setValueAtTime(0.001, now + idx * 0.14);
+                    gain.gain.linearRampToValueAtTime(0.18, now + idx * 0.14 + 0.04);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.14 + 0.9);
+
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+
+                    osc.start(now + idx * 0.14);
+                    osc.stop(now + idx * 0.14 + 0.95);
+                });
+            } catch (e) {
+                console.warn("Audio ijro etilmadi:", e);
+            }
+        }
+
+        function toggleSound() {
+            settings.soundEnabled = !settings.soundEnabled;
+            saveSettingsToStorage();
+            updateSoundIcon();
+            if (settings.soundEnabled) {
+                playNotificationSound('click');
+                showToast("Ovozli bildirishnomalar yoqildi", "info");
+            } else {
+                showToast("Ovoz o'chirildi", "info");
+            }
+        }
+
+        function updateSoundIcon() {
+            const icon = document.getElementById('sound-icon');
+            if (settings.soundEnabled) {
+                icon.className = 'fa-solid fa-volume-high text-sm w-4 h-4 flex items-center justify-center';
+            } else {
+                icon.className = 'fa-solid fa-volume-xmark text-sm w-4 h-4 flex items-center justify-center text-slate-400';
+            }
+        }
+
+        // ==========================================
+        // 4. TIMER CORE LOGIC & UI UPDATES
+        // ==========================================
+        function switchMode(mode, autoStart = false) {
+            pauseTimer();
+            currentMode = mode;
+
+            // Calculate duration in seconds
+            const minutes = settings[mode];
+            totalTime = minutes * 60;
+            timeLeft = totalTime;
+
+            updateModeThemeUI();
+            updateTimerDisplay();
+            document.getElementById('status-label').textContent = 'Tayyor';
+
+            if (autoStart) {
+                startTimer();
+            }
+        }
+
+        function toggleTimer() {
+            playNotificationSound('click');
+            if (isRunning) {
+                pauseTimer();
+            } else {
+                startTimer();
+            }
+        }
+
+        function startTimer() {
+            if (isRunning) return;
+            isRunning = true;
+
+            const btnText = document.getElementById('play-pause-text');
+            const btnIcon = document.getElementById('play-pause-icon');
+            const statusLabel = document.getElementById('status-label');
+
+            btnText.textContent = "To'xtatish";
+            btnIcon.className = 'fa-solid fa-pause';
+            statusLabel.textContent = currentMode === 'focus' ? 'Diqqatni jamlang...' : 'Dam oling...';
+
+            timerInterval = setInterval(() => {
+                if (timeLeft > 0) {
+                    timeLeft--;
+                    updateTimerDisplay();
+                } else {
+                    handleTimerComplete();
+                }
+            }, 1000);
+        }
+
+        function pauseTimer() {
+            isRunning = false;
+            clearInterval(timerInterval);
+            timerInterval = null;
+
+            const btnText = document.getElementById('play-pause-text');
+            const btnIcon = document.getElementById('play-pause-icon');
+            const statusLabel = document.getElementById('status-label');
+
+            btnText.textContent = 'Boshlash';
+            btnIcon.className = 'fa-solid fa-play';
+            if (timeLeft > 0 && timeLeft < totalTime) {
+                statusLabel.textContent = "To'xtatilgan";
+            }
+        }
+
+        function resetTimer() {
+            playNotificationSound('click');
+            pauseTimer();
+            timeLeft = settings[currentMode] * 60;
+            totalTime = timeLeft;
+            updateTimerDisplay();
+            document.getElementById('status-label').textContent = 'Tayyor';
+        }
+
+        function skipTimer() {
+            playNotificationSound('click');
+            pauseTimer();
+            transitionToNextMode(false);
+        }
+
+        function handleTimerComplete() {
+            pauseTimer();
+            playNotificationSound('complete');
+
+            if (currentMode === 'focus') {
+                // Update daily statistics
+                stats.sessions += 1;
+                stats.minutes += settings.focus;
+                saveStats();
+                updateStatsUI();
+
+                // Increment completed pomodoro count on active task
+                if (activeTaskId) {
+                    const task = tasks.find(t => t.id === activeTaskId);
+                    if (task && !task.completed) {
+                        task.completedPomodoros += 1;
+                        saveTasks();
+                        renderTasks();
+                    }
+                }
+
+                completedFocusCycles++;
+                renderCycleDots();
+                showToast("Fokus sessiyasi yakunlandi! Tanaffus vaqti.", "success");
+                transitionToNextMode(settings.autoStartBreaks);
+            } else {
+                showToast("Tanaffus tugadi! Yangi fokus sessiyasiga tayyormisiz?", "info");
+                transitionToNextMode(settings.autoStartPomodoros);
+            }
+        }
+
+        function transitionToNextMode(shouldAutoStart) {
+            if (currentMode === 'focus') {
+                if (completedFocusCycles > 0 && completedFocusCycles % settings.longBreakInterval === 0) {
+                    switchMode('longBreak', shouldAutoStart);
+                } else {
+                    switchMode('shortBreak', shouldAutoStart);
+                }
+            } else {
+                switchMode('focus', shouldAutoStart);
+            }
+        }
+
+        function updateTimerDisplay() {
+            const mins = Math.floor(timeLeft / 60);
+            const secs = timeLeft % 60;
+            const formatted = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+            document.getElementById('time-display').textContent = formatted;
+            document.title = `${formatted} — ${MODE_THEMES[currentMode].label} | FokusFlow`;
+
+            // Update Circular Progress Ring
+            const ring = document.getElementById('progress-ring');
+            const progressRatio = totalTime > 0 ? timeLeft / totalTime : 0;
+            const offset = CIRCLE_CIRCUMFERENCE * (1 - progressRatio);
+            ring.style.strokeDasharray = CIRCLE_CIRCUMFERENCE;
+            ring.style.strokeDashoffset = offset;
+        }
+
+        function updateModeThemeUI() {
+            const theme = MODE_THEMES[currentMode];
+
+            // Update Tabs styling
+            ['focus', 'shortBreak', 'longBreak'].forEach(modeKey => {
+                const tab = document.getElementById(`tab-${modeKey}`);
+                if (modeKey === currentMode) {
+                    tab.className = `mode-tab py-2.5 px-2 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 ${theme.bg} text-white shadow-sm`;
+                } else {
+                    tab.className = `mode-tab py-2.5 px-2 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all duration-300`;
+                }
+            });
+
+            // Update Progress Ring Color
+            const ring = document.getElementById('progress-ring');
+            ring.classList.remove('text-rose-500', 'text-teal-500', 'text-indigo-500');
+            ring.classList.add(theme.text);
+
+            // Update Primary Button Color
+            const startBtn = document.getElementById('start-pause-btn');
+            startBtn.className = `px-8 sm:px-10 py-3.5 sm:py-4 rounded-2xl ${theme.bg} ${theme.hover} text-white font-bold text-base sm:text-lg shadow-lg ${theme.shadow} transition-all active:scale-95 flex items-center gap-2.5 min-w-[170px] justify-center`;
+
+            // Update Brand Icon & Section Icons
+            const brandIcon = document.getElementById('brand-icon');
+            brandIcon.className = `w-9 h-9 rounded-xl ${theme.bg} text-white flex items-center justify-center shadow-md ${theme.badgeShadow} transition-colors duration-500`;
+
+            const addTaskBtn = document.getElementById('add-task-btn');
+            addTaskBtn.className = `px-4 py-1.5 rounded-xl ${theme.bg} ${theme.hover} text-white text-xs font-semibold shadow-sm transition-all active:scale-95 flex items-center gap-1.5`;
+
+            document.getElementById('stats-icon').className = `fa-solid fa-chart-simple ${theme.text}`;
+            document.getElementById('tasks-icon').className = `fa-solid fa-list-check ${theme.text}`;
+
+            renderCycleDots();
+        }
+
+        function renderCycleDots() {
+            const container = document.getElementById('cycle-dots');
+            const interval = settings.longBreakInterval;
+            const currentCycleProgress = completedFocusCycles % interval;
+            const theme = MODE_THEMES[currentMode];
+
+            let dotsHTML = '';
+            for (let i = 0; i < interval; i++) {
+                if (i < currentCycleProgress || (currentCycleProgress === 0 && completedFocusCycles > 0 && currentMode === 'longBreak')) {
+                    dotsHTML += `<span class="w-2.5 h-2.5 rounded-full ${theme.bg} transition-colors"></span>`;
+                } else {
+                    dotsHTML += `<span class="w-2.5 h-2.5 rounded-full bg-slate-200 dark:bg-slate-700 transition-colors"></span>`;
+                }
+            }
+            container.innerHTML = dotsHTML;
+        }
+
+        // ==========================================
+        // 5. TASK MANAGER LOGIC
+        // ==========================================
+        function adjustEstInput(delta) {
+            const input = document.getElementById('new-task-est');
+            let val = parseInt(input.value, 10) || 1;
+            val = Math.min(12, Math.max(1, val + delta));
+            input.value = val;
+        }
+
+        function handleAddTask(e) {
+            e.preventDefault();
+            const input = document.getElementById('new-task-input');
+            const estInput = document.getElementById('new-task-est');
+            const title = input.value.trim();
+
+            if (!title) return;
+
+            const newTask = {
+                id: 'task_' + Date.now(),
+                title: title,
+                estPomodoros: parseInt(estInput.value, 10) || 1,
+                completedPomodoros: 0,
+                completed: false
+            };
+
+            tasks.unshift(newTask);
+            if (!activeTaskId) {
+                activeTaskId = newTask.id;
+            }
+
+            input.value = '';
+            estInput.value = 1;
+            saveTasks();
+            renderTasks();
+            playNotificationSound('click');
+            showToast("Yangi vazifa qo'shildi", "success");
+        }
+
+        function selectActiveTask(id) {
+            activeTaskId = id;
+            saveTasks();
+            renderTasks();
+        }
+
+        function toggleTaskComplete(id, event) {
+            event.stopPropagation();
+            const task = tasks.find(t => t.id === id);
+            if (!task) return;
+
+            task.completed = !task.completed;
+            if (task.completed) {
+                stats.completedTasks += 1;
+                if (activeTaskId === id) {
+                    const nextIncomplete = tasks.find(t => !t.completed && t.id !== id);
+                    activeTaskId = nextIncomplete ? nextIncomplete.id : null;
+                }
+                playNotificationSound('click');
+            } else {
+                stats.completedTasks = Math.max(0, stats.completedTasks - 1);
+            }
+
+            saveStats();
+            updateStatsUI();
+            saveTasks();
+            renderTasks();
+        }
+
+        function deleteTask(id, event) {
+            event.stopPropagation();
+            tasks = tasks.filter(t => t.id !== id);
+            if (activeTaskId === id) {
+                const nextTask = tasks.find(t => !t.completed);
+                activeTaskId = nextTask ? nextTask.id : null;
+            }
+            saveTasks();
+            renderTasks();
+            showToast("Vazifa o'chirildi", "info");
+        }
+
+        function clearCompletedTasks() {
+            tasks = tasks.filter(t => !t.completed);
+            saveTasks();
+            renderTasks();
+            showToast("Bajarilgan vazifalar tozalandi", "info");
+        }
+
+        function renderTasks() {
+            const listEl = document.getElementById('task-list');
+            const counterBadge = document.getElementById('task-counter-badge');
+            const footerActions = document.getElementById('task-footer-actions');
+            const activeBanner = document.getElementById('active-task-display');
+
+            const completedCount = tasks.filter(t => t.completed).length;
+            counterBadge.textContent = `${completedCount} / ${tasks.length}`;
+
+            // Update Active Task Banner on Timer
+            const activeTask = tasks.find(t => t.id === activeTaskId && !t.completed);
+            if (activeTask) {
+                activeBanner.textContent = activeTask.title;
+                activeBanner.classList.add('font-semibold');
+            } else {
+                activeBanner.textContent = "Vazifa tanlanmagan — erkin fokus";
+                activeBanner.classList.remove('font-semibold');
+            }
+
+            // Toggle footer clear button
+            if (completedCount > 0) {
+                footerActions.classList.remove('hidden');
+            } else {
+                footerActions.classList.add('hidden');
+            }
+
+            if (tasks.length === 0) {
+                listEl.innerHTML = `
+                    <div class="text-center py-10 px-4 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">
+                        <i class="fa-regular fa-clipboard text-2xl text-slate-300 dark:text-slate-600 mb-2"></i>
+                        <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Hozircha vazifalar yo'q</p>
+                        <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">Yuqoridagi maydon orqali yangi vazifa qo'shing</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const theme = MODE_THEMES[currentMode];
+
+            listEl.innerHTML = tasks.map(task => {
+                const isSelected = task.id === activeTaskId && !task.completed;
+                const borderClass = isSelected
+                    ? `border-l-4 border-rose-500 bg-rose-50/40 dark:bg-slate-800/90 border-y border-r border-slate-200 dark:border-slate-700`
+                    : `border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-800/40 hover:bg-slate-50 dark:hover:bg-slate-800/70`;
+
+                return `
+                    <div onclick="selectActiveTask('${task.id}')" class="group flex items-center justify-between p-3.5 rounded-2xl ${borderClass} cursor-pointer transition-all">
+                        <div class="flex items-center gap-3 min-w-0 flex-1">
+                            <button onclick="toggleTaskComplete('${task.id}', event)" title="Bajarildi deb belgilash"
+                                class="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${task.completed ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-300 dark:border-slate-600 hover:border-rose-500'}">
+                                ${task.completed ? '<i class="fa-solid fa-check text-[10px]"></i>' : ''}
+                            </button>
+                            <span class="text-sm font-medium truncate ${task.completed ? 'line-through text-slate-400 dark:text-slate-500' : 'text-slate-800 dark:text-slate-100'}">
+                                ${escapeHTML(task.title)}
+                            </span>
+                        </div>
+
+                        <div class="flex items-center gap-2.5 ml-2 flex-shrink-0">
+                            <span class="text-xs font-bold px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300" title="Bajarilgan / Rejalashtirilgan Pomodoro">
+                                ${task.completedPomodoros}/${task.estPomodoros}
+                            </span>
+                            <button onclick="deleteTask('${task.id}', event)" title="O'chirish"
+                                class="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-slate-700 opacity-70 sm:opacity-0 group-hover:opacity-100 transition-all">
+                                <i class="fa-solid fa-trash-can text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function escapeHTML(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // ==========================================
+        // 6. STATISTICS & SETTINGS MODAL
+        // ==========================================
+        function updateStatsUI() {
+            document.getElementById('stat-sessions').textContent = stats.sessions;
+            document.getElementById('stat-minutes').textContent = stats.minutes;
+            document.getElementById('stat-tasks').textContent = stats.completedTasks;
+        }
+
+        function resetDailyStats() {
+            stats = {
+                date: new Date().toDateString(),
+                sessions: 0,
+                minutes: 0,
+                completedTasks: 0
+            };
+            saveStats();
+            updateStatsUI();
+            showToast("Bugungi statistika nolga tushirildi", "info");
+        }
+
+        function openSettingsModal() {
+            document.getElementById('set-focus').value = settings.focus;
+            document.getElementById('set-short').value = settings.shortBreak;
+            document.getElementById('set-long').value = settings.longBreak;
+            document.getElementById('set-interval').value = settings.longBreakInterval;
+            document.getElementById('set-auto-breaks').checked = settings.autoStartBreaks;
+            document.getElementById('set-auto-pomodoros').checked = settings.autoStartPomodoros;
+
+            const modal = document.getElementById('settings-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeSettingsModal() {
+            const modal = document.getElementById('settings-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function saveSettings(e) {
+            e.preventDefault();
+            settings.focus = Math.max(1, Math.min(120, parseInt(document.getElementById('set-focus').value, 10) || 25));
+            settings.shortBreak = Math.max(1, Math.min(60, parseInt(document.getElementById('set-short').value, 10) || 5));
+            settings.longBreak = Math.max(1, Math.min(90, parseInt(document.getElementById('set-long').value, 10) || 15));
+            settings.longBreakInterval = Math.max(2, Math.min(10, parseInt(document.getElementById('set-interval').value, 10) || 4));
+            settings.autoStartBreaks = document.getElementById('set-auto-breaks').checked;
+            settings.autoStartPomodoros = document.getElementById('set-auto-pomodoros').checked;
+
+            saveSettingsToStorage();
+            closeSettingsModal();
+            switchMode(currentMode, false);
+            renderCycleDots();
+            showToast("Sozlamalar muvaffaqiyatli saqlandi", "success");
+        }
+
+        // ==========================================
+        // 7. THEME & TOAST NOTIFICATIONS
+        // ==========================================
+        function toggleTheme() {
+            settings.darkMode = !settings.darkMode;
+            saveSettingsToStorage();
+            applyThemePreference();
+        }
+
+        function applyThemePreference() {
+            const html = document.documentElement;
+            const icon = document.getElementById('theme-icon');
+            if (settings.darkMode) {
+                html.classList.add('dark');
+                icon.className = 'fa-solid fa-sun text-sm w-4 h-4 flex items-center justify-center text-amber-400';
+            } else {
+                html.classList.remove('dark');
+                icon.className = 'fa-solid fa-moon text-sm w-4 h-4 flex items-center justify-center';
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+
+            const iconClass = type === 'success'
+                ? 'fa-solid fa-circle-check text-emerald-400'
+                : 'fa-solid fa-circle-info text-sky-400';
+
+            toast.className = 'pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-2xl bg-slate-900 dark:bg-slate-800 text-white text-xs sm:text-sm font-medium shadow-xl border border-slate-700/80 transform translate-y-2 opacity-0 transition-all duration-300';
+            toast.innerHTML = `<i class="${iconClass} text-base"></i><span>${escapeHTML(message)}</span>`;
+
+            container.appendChild(toast);
+
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            });
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-2', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3200);
+        }
+    </script>
+</body>
+</html>
